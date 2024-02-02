@@ -31,7 +31,18 @@ type latestBuild struct {
 func getLatestBuild() (latestBuild, error) {
 	var latest latestBuild
 
-	resp, err := http.Get(latestBuildUrl)
+	// Create a new request
+    req, err := http.NewRequest("GET", latestBuildUrl, nil)
+    if err != nil {
+        log.Fatalln(err)
+    }
+
+    // Add headers
+    req.Header.Add("User-Agent", "BYM-Launcher")
+
+    // Create a new HTTP client and send the request
+    client := &http.Client{}
+    resp, err := client.Do(req)
 	if err != nil {
 		log.Fatalln(err)
 	}
