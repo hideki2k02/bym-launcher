@@ -7,11 +7,12 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+
 	// "runtime"
 	// "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-    // "github.com/wailsapp/wails/v2/pkg/options"
-  	// "github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	// "github.com/wailsapp/wails/v2/pkg/options"
+	// "github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
 // App struct
@@ -46,29 +47,57 @@ func (a *App) startup(ctx context.Context) {
 // }
 
 
+// App struct
+type InitialInfo struct {
+	Platform string `json:"platform"`
+	Architecture string `json:"architecture"`
+	// latestSwfversion int
+	// localSwfversion int
+	Manifest VersionManifest `json:"manifest"`
+}
+
+// Status  string   `json:"status"`
+	// Objekte []Objekt `json:"objekte"`
+
 func (a *App) InitializeApp() error {
 	// First - get current info
+	if a.ctx == nil {
+		return errors.New("context is nil")
+	}
 	// Get OS info
-
 	os := runtime.Environment(a.ctx)
+
 	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Platform: %s %v", os.Platform, os.Arch))
     
 	// Linux, Windows, Mac - architecture, version, etc
 
-	latest, err := getLatestBuild()
+	// latest, err := getLatestBuild()
 
-	if err != nil {
-		runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not retrieve latest build %s", err))
-		return nil
-	}
-	localVersion, _ := createBuildFolderAndVersionFile()
-	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Latest version: %d \n", latest.ID))
-	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Current version: %d ", localVersion))
+	// if err != nil {
+	// 	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not retrieve latest build %s", err))
+	// 	return nil
+	// }
+	// localVersion, _ := createBuildFolderAndVersionFile()
+	// runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Latest version: %d \n", latest.ID))
+	// runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Current version: %d ", localVersion))
 	
+	versionManifest, err:=getVersionInfo(a.ctx)
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "infoLog", "Fuck")
+		return err
+	}
+
 	// Get server info - is online, latest version, runtime info + links
 
 	// 
-
+	// runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("What: %s",versionManifest))
+	runtime.EventsEmit(a.ctx, "initialLoad", InitialInfo{
+		Platform: os.Platform,
+		Architecture: os.Arch,
+		// latestSwfversion: latest.ID,
+		// localSwfversion: localVersion,
+		Manifest: versionManifest,
+	})
 
 	// Pass to frontend
 	return nil
@@ -82,15 +111,15 @@ func (a *App) LaunchGame(build string,runtimeName string) error {
 	}
 
 	fmt.Print(latest.ID)
-
 	fPath := filepath.Join(".", buildFolder, fmt.Sprintf("bymr-%s.swf", build))
-
+	
 	if !fileExists(fPath) {
 		fmt.Print("cannot find file: ", fPath)
 		return errors.New("cannot find swf build")
 	}
+	const runtimeFolder = "flashRuntimes"
 
-	pPath := filepath.Join(".", "flashplayer", "flashplayer_32.exe")
+	pPath := filepath.Join(".", runtimeFolder, "flashplayer_32.exe")
 	if !fileExists(pPath) {
 		fmt.Print("cannot find file: ", fPath)
 		return errors.New("cannot find flashplayer")

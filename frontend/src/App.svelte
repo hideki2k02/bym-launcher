@@ -36,6 +36,16 @@
     debugLogs = [...debugLogs, event];
   });
 
+  EventsOn('initialLoad', (event) => {
+    LogPrint(JSON.stringify(event));
+    debugLogs = [
+      ...debugLogs,
+
+      `Latest SWF version: ${event.manifest.currentGameVersion}`,
+      `Latest Launcher version: ${event.manifest.currentLauncherVersion}`,
+    ];
+  });
+
   InitializeApp().then(() => {
     debugLogs = [...debugLogs, 'Launcher initialized'];
   });

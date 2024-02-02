@@ -1,0 +1,14 @@
+{
+  "currentGameVersion": "0.2.3",
+  "currentLauncherVersion": "0.1.0",
+  "builds": {
+    "stable": "",
+    "http": "",
+    "local": ""
+  },
+  "flashRuntimes": {
+    "windows": "",
+    "darwin": "",
+    "linux": ""
+  }
+}
