@@ -13,7 +13,10 @@ import (
 )
 
 const buildFolder = "bymr"
+const runtimeFolder = "flashRuntimes"
 const latestBuildUrl = "https://api.github.com/repos/bym-refitted/backyard-monsters-refitted/releases/latest"
+
+const flashPlayerArchiveUrl = "https://archive.org/download/standalone_flash_player/Flash%20Player%2032.0%20r101%20%5BWin%5D%20%5BStand%20Alone%5D.exe"
 
 type Assets struct {
 	Url  string `json:"browser_download_url"`
@@ -38,21 +41,16 @@ func getLatestBuild() (latestBuild, error) {
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&latest)
-	if err != nil {
-		return latest, err
-	}
+	// if err != nil {
+	// 	return latest, err
+	// }
 	return latest, nil
 }
 
 func createBuildFolderAndVersionFile() (int, error) {
-	_, err := os.Stat(buildFolder)
-	if os.IsNotExist(err) {
-		err := os.Mkdir(buildFolder, 0755)
-		if err != nil {
-			return 0, fmt.Errorf("failed to create bymr folder: %v", err)
-		}
-	}
-
+	err := ensureFolderExists(buildFolder)
+	err = ensureFolderExists(runtimeFolder)
+	_, err = downloadRuntime("flashplayer_32.exe")
 	// Check if "version.txt" file exists
 	versionFilePath := filepath.Join(buildFolder, "version.txt")
 	if !fileExists(versionFilePath) {
@@ -83,12 +81,54 @@ func createBuildFolderAndVersionFile() (int, error) {
 	return version, err
 }
 
+
+func ensureFolderExists(folder string) error {
+	_, err := os.Stat(folder)
+	if os.IsNotExist(err) {
+		err := os.Mkdir(folder, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create %v folder: %v", folder, err)
+		}
+	}
+	return nil
+}
+
+func downloadRuntime(fileName string) (string, error) {
+	// Ensure the runtimes folder exists
+	ensureFolderExists(runtimeFolder)
+	// Construct the path for the downloaded file within the "bymr" folder
+	filePath := filepath.Join(runtimeFolder, fileName)
+	if !fileExists(filePath) {
+		fmt.Printf("Flash player not installed - Downloading")
+		// Send GET request to download the latest build
+		resp, err := http.Get(flashPlayerArchiveUrl)
+		if err != nil {
+			return "", fmt.Errorf("failed to download latest build: %v", err)
+		}
+		defer resp.Body.Close()
+
+		// Create the file to save the downloaded build
+		out, err := os.Create(filePath)
+		if err != nil {
+			return "", fmt.Errorf("failed to create file: %v", err)
+		}
+		defer out.Close()
+
+		// Copy the downloaded content to the file
+		_, err = io.Copy(out, resp.Body)
+		if err != nil {
+			return "", fmt.Errorf("failed to write to file: %v", err)
+		}
+		fmt.Printf("Flash player downloaded successfully ")
+	}
+	// Return the absolute path to the downloaded file
+	return filepath.Abs(filePath)
+}
+
 func downloadLatestBuild(url string, fileName string) (string, error) {
 	// Ensure the "bymr" folder exists
-	err := os.MkdirAll(buildFolder, os.ModePerm)
-	if err != nil {
-		return "", fmt.Errorf("failed to create bymr folder: %v", err)
-	}
+	err := ensureFolderExists(buildFolder)
+
 
 	// Construct the path for the downloaded file within the "bymr" folder
 	filePath := filepath.Join(buildFolder, fileName)
@@ -117,6 +157,7 @@ func downloadLatestBuild(url string, fileName string) (string, error) {
 	return filepath.Abs(filePath)
 }
 
+
 func fileExists(filePath string) bool {
 	_, err := os.Stat(filePath)
 	return !os.IsNotExist(err)
@@ -130,6 +171,7 @@ func patcher() (latestBuild, error) {
 	}
 	cVersion, _ := createBuildFolderAndVersionFile()
 	fmt.Printf("Current version: %d | Latest version: %d \n", cVersion, lVersion.ID)
+	
 
 	if cVersion != lVersion.ID {
 		fmt.Println("Downloading latest build")

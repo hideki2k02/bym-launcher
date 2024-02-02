@@ -7,6 +7,11 @@ import (
 	"log"
 	"os/exec"
 	"path/filepath"
+	// "runtime"
+	// "github.com/wailsapp/wails/v2"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
+    // "github.com/wailsapp/wails/v2/pkg/options"
+  	// "github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
 // App struct
@@ -19,22 +24,57 @@ func NewApp() *App {
 	return &App{}
 }
 
-// startup is called when the app starts. The context is saved
+// sartup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+// const (
+// 	Windows string = "windows"
+// 	Mac        = "mac"
+// 	Linux        = "linux"
+// )
+
+// let currentOS = runtime.GOOS
+
+// https://archive.org/download/flashplayer32_0r0_363_win_sa
+
+// type ImportEvent struct {
+// 	Status  string   `json:"status"`
+// 	Objekte []Objekt `json:"objekte"`
+// }
+
+
+func (a *App) InitializeApp() error {
+	// First - get current info
+	// Get OS info
+
+	os := runtime.Environment(a.ctx)
+	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Platform: %s %v", os.Platform, os.Arch))
+    
+	// Linux, Windows, Mac - architecture, version, etc
+
+	latest, err := getLatestBuild()
+
+	if err != nil {
+		runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not retrieve latest build %s", err))
+		return nil
+	}
+	localVersion, _ := createBuildFolderAndVersionFile()
+	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Latest version: %d \n", latest.ID))
+	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Current version: %d ", localVersion))
+	
+	// Get server info - is online, latest version, runtime info + links
+
+	// 
+
+
+	// Pass to frontend
+	return nil
 }
 
-func (a *App) LaunchGame(build string) error {
-
-	//if  {
-	//
-	//}
+func (a *App) LaunchGame(build string,runtimeName string) error {
 
 	latest, err := patcher()
 	if err != nil {
