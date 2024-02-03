@@ -4,15 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
-	"os/exec"
-	"path/filepath"
 
-	// "runtime"
-	// "github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
-	// "github.com/wailsapp/wails/v2/pkg/options"
-	// "github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
 // App struct
@@ -31,107 +24,103 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 }
 
-// const (
-// 	Windows string = "windows"
-// 	Mac        = "mac"
-// 	Linux        = "linux"
-// )
-
-// let currentOS = runtime.GOOS
-
-// https://archive.org/download/flashplayer32_0r0_363_win_sa
-
-// type ImportEvent struct {
-// 	Status  string   `json:"status"`
-// 	Objekte []Objekt `json:"objekte"`
-// }
-
-
-// App struct
 type InitialInfo struct {
-	Platform string `json:"platform"`
-	Architecture string `json:"architecture"`
-	// latestSwfversion int
-	// localSwfversion int
-	Manifest VersionManifest `json:"manifest"`
+	Platform     string          `json:"platform"`
+	Architecture string          `json:"architecture"`
+	Manifest     VersionManifest `json:"manifest"`
 }
-
-// Status  string   `json:"status"`
-	// Objekte []Objekt `json:"objekte"`
 
 func (a *App) InitializeApp() error {
 	// First - get current info
 	if a.ctx == nil {
-		return errors.New("context is nil")
+		return errors.New("context is nil, something went severely wrong. Please restart the app and contact GHark on Discord.")
 	}
 	// Get OS info
 	os := runtime.Environment(a.ctx)
 
 	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Platform: %s %v", os.Platform, os.Arch))
-    
-	// Linux, Windows, Mac - architecture, version, etc
 
-	// latest, err := getLatestBuild()
-
-	// if err != nil {
-	// 	runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not retrieve latest build %s", err))
-	// 	return nil
-	// }
-	// localVersion, _ := createBuildFolderAndVersionFile()
-	// runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Latest version: %d \n", latest.ID))
-	// runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Current version: %d ", localVersion))
-	
-	versionManifest, err:=getVersionInfo(a.ctx)
+	serverManifest, err := getVersionInfo(a.ctx)
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "infoLog", "Fuck")
+		runtime.EventsEmit(a.ctx, "infoLog", "Server manifest could not be retieved. Please check your internet connection.")
 		return err
 	}
 
 	// Get server info - is online, latest version, runtime info + links
-
-	// 
-	// runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("What: %s",versionManifest))
 	runtime.EventsEmit(a.ctx, "initialLoad", InitialInfo{
-		Platform: os.Platform,
+		Platform:     os.Platform,
 		Architecture: os.Arch,
-		// latestSwfversion: latest.ID,
-		// localSwfversion: localVersion,
-		Manifest: versionManifest,
+		Manifest:     serverManifest,
+	})
+
+	localManifestExists, localManifest, err := localFilesStatus()
+
+	noLocalManifest := !localManifestExists || err != nil
+
+	shouldRefreshBuilds := noLocalManifest || serverManifest.CurrentGameVersion != localManifest.CurrentGameVersion
+
+	if shouldRefreshBuilds {
+		// download swfs
+		runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Downloading latest SWFs"))
+		err := downloadSwfs(serverManifest.Builds, serverManifest.CurrentGameVersion, serverManifest.httpsWorked)
+
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not download latest swfs %s", err))
+		}
+	}
+
+	flashRuntimeUrl, flashRuntimeFileName, err := getPlatformFlashRuntime(os, serverManifest)
+
+	if noLocalManifest || !fileExists(flashRuntimeFileName) {
+		// download players
+		runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Downloading flash player"))
+		downloadRuntimes(flashRuntimeUrl, flashRuntimeFileName, serverManifest.httpsWorked)
+		if err != nil {
+			runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not download latest flash runtime %s", err))
+		}
+	}
+
+	// Store the locally downloaded versions
+	setLocalVersions(LocalVersionManifest{
+		CurrentGameVersion:     serverManifest.CurrentGameVersion,
+		CurrentLauncherVersion: serverManifest.CurrentLauncherVersion,
+		Builds:                 serverManifest.Builds,
+		FlashRuntimes:          serverManifest.FlashRuntimes,
 	})
 
 	// Pass to frontend
 	return nil
 }
 
-func (a *App) LaunchGame(build string,runtimeName string) error {
+func (a *App) LaunchGame(build string, runtimeName string) error {
 
-	latest, err := patcher()
-	if err != nil {
-		return errors.New("error on getting latest files")
-	}
+	// latest, err := patcher()
+	// if err != nil {
+	// 	return errors.New("error on getting latest files")
+	// }
 
-	fmt.Print(latest.ID)
-	fPath := filepath.Join(".", buildFolder, fmt.Sprintf("bymr-%s.swf", build))
-	
-	if !fileExists(fPath) {
-		fmt.Print("cannot find file: ", fPath)
-		return errors.New("cannot find swf build")
-	}
-	const runtimeFolder = "flashRuntimes"
+	// fmt.Print(latest.ID)
+	// fPath := filepath.Join(".", buildFolder, fmt.Sprintf("bymr-%s.swf", build))
 
-	pPath := filepath.Join(".", runtimeFolder, "flashplayer_32.exe")
-	if !fileExists(pPath) {
-		fmt.Print("cannot find file: ", fPath)
-		return errors.New("cannot find flashplayer")
-	}
-	cmd := exec.Command(pPath, fPath)
-	//     cmd.SysProcAttr = &syscall.SysProcAttr{
-	//         HideWindow:    true,
-	//         CreationFlags: 0x08000000,
-	//     }
-	if err := cmd.Start(); err != nil {
-		log.Println("[BYMR LAUNCHER] Failed to start BYMR build %s: %v", build, err)
-		return err
-	}
+	// if !fileExists(fPath) {
+	// 	fmt.Print("cannot find file: ", fPath)
+	// 	return errors.New("cannot find swf build")
+	// }
+	// const runtimeFolder = "flashRuntimes"
+
+	// pPath := filepath.Join(".", runtimeFolder, "flashplayer_32.exe")
+	// if !fileExists(pPath) {
+	// 	fmt.Print("cannot find file: ", fPath)
+	// 	return errors.New("cannot find flashplayer")
+	// }
+	// cmd := exec.Command(pPath, fPath)
+	// //     cmd.SysProcAttr = &syscall.SysProcAttr{
+	// //         HideWindow:    true,
+	// //         CreationFlags: 0x08000000,
+	// //     }
+	// if err := cmd.Start(); err != nil {
+	// 	log.Printf("[BYMR LAUNCHER] Failed to start BYMR build %s: %v", build, err)
+	// 	return err
+	// }
 	return nil
 }

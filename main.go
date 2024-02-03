@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -16,7 +17,7 @@ func main() {
 	app := NewApp()
 
 	onStartup := func(ctx context.Context) {
-		patcher()
+		// patcher()
 		app.startup(ctx)
 	}
 
