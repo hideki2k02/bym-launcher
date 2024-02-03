@@ -10,16 +10,12 @@
 
   setMode('dark');
 
-  let builds = [
-    // { value: 'stable', label: 'Stable' },
-    // { value: 'http', label: 'Http' },
-    // { value: 'local', label: 'Local' },
-  ];
+  let builds = [];
   let build;
 
   const runtimes = [
     { value: 'flashplayer.exe', label: 'Flash Player' },
-    // { value: 'ruffle', label: 'Ruffle Player (Experimental)' },
+    // { value: 'ruffle', label: 'Ruffle Player (Experimental)' }, TODO" implement this
   ];
 
   let runtime = runtimes[0];
@@ -43,7 +39,6 @@
   EventsOn('initialLoad', (event) => {
     LogPrint(JSON.stringify(event));
 
-    // launchInfo = event;
     builds = Object.keys(event.manifest.builds).map((buildName) => ({
       value: buildName,
       label: capitalizeFirstLetter(buildName),
