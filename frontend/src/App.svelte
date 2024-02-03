@@ -10,12 +10,12 @@
 
   setMode('dark');
 
-  const builds = [
-    { value: 'stable', label: 'Stable' },
-    { value: 'http', label: 'Http' },
-    { value: 'local', label: 'Local' },
+  let builds = [
+    // { value: 'stable', label: 'Stable' },
+    // { value: 'http', label: 'Http' },
+    // { value: 'local', label: 'Local' },
   ];
-  let build = builds[0];
+  let build;
 
   const runtimes = [
     { value: 'flashplayer.exe', label: 'Flash Player' },
@@ -30,12 +30,27 @@
 
   let debugLogs = [];
 
+  let version;
+
   EventsOn('infoLog', (event) => {
     debugLogs = [...debugLogs, event];
   });
 
+  function capitalizeFirstLetter(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1);
+  }
+
   EventsOn('initialLoad', (event) => {
     LogPrint(JSON.stringify(event));
+
+    // launchInfo = event;
+    builds = Object.keys(event.manifest.builds).map((buildName) => ({
+      value: buildName,
+      label: capitalizeFirstLetter(buildName),
+    }));
+    build = builds[0];
+    version = event.manifest.currentGameVersion;
+
     debugLogs = [
       ...debugLogs,
 
@@ -50,7 +65,7 @@
 
   function launch() {
     disabled = true;
-    LaunchGame(build.value, '0.2.3', runtime.value)
+    LaunchGame(build.value, version, runtime.value)
       .then(() => {
         showError = false;
         Quit();
