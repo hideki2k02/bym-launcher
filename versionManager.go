@@ -104,6 +104,21 @@ func downloadSwfs(builds Builds, version string, useHttps bool) error {
 	return nil
 }
 
+func doAllSwfsExist(builds Builds, version string) bool {
+	buildsToDownload := map[string]string{
+		builds.Stable: "stable",
+		builds.Http:   "http",
+		builds.Local:  "local",
+	}
+	for _, buildName := range buildsToDownload {
+		buildPath := filepath.Join(buildFolder, fmt.Sprintf("bymr-%s-%s.swf", buildName, version))
+		if !fileExists(buildPath) {
+			return false
+		}
+	}
+	return true
+}
+
 func downloadRuntimes(flashRuntimeUrl string, flashRuntimeFileName string, useHttps bool) error {
 	flashFilePath := filepath.Join(runtimeFolder, flashRuntimeFileName)
 	return downloadFile(flashFilePath, flashRuntimeUrl, useHttps)

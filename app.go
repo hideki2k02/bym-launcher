@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -57,7 +60,7 @@ func (a *App) InitializeApp() error {
 
 	noLocalManifest := !localManifestExists || err != nil
 
-	shouldRefreshBuilds := noLocalManifest || serverManifest.CurrentGameVersion != localManifest.CurrentGameVersion
+	shouldRefreshBuilds := noLocalManifest || serverManifest.CurrentGameVersion != localManifest.CurrentGameVersion || !doAllSwfsExist(serverManifest.Builds, serverManifest.CurrentGameVersion)
 
 	if shouldRefreshBuilds {
 		// download swfs
@@ -92,35 +95,30 @@ func (a *App) InitializeApp() error {
 	return nil
 }
 
-func (a *App) LaunchGame(build string, runtimeName string) error {
+func (a *App) LaunchGame(buildName string, version string, flashRuntimeName string) error {
 
-	// latest, err := patcher()
-	// if err != nil {
-	// 	return errors.New("error on getting latest files")
-	// }
+	swfPath := filepath.Join(".", buildFolder, fmt.Sprintf("bymr-%s-%s.swf", buildName, version))
 
-	// fmt.Print(latest.ID)
-	// fPath := filepath.Join(".", buildFolder, fmt.Sprintf("bymr-%s.swf", build))
-
-	// if !fileExists(fPath) {
-	// 	fmt.Print("cannot find file: ", fPath)
-	// 	return errors.New("cannot find swf build")
-	// }
+	if !fileExists(swfPath) {
+		fmt.Print("Cannot find file: ", swfPath)
+		return errors.New("cannot find swf build")
+	}
 	// const runtimeFolder = "flashRuntimes"
 
-	// pPath := filepath.Join(".", runtimeFolder, "flashplayer_32.exe")
-	// if !fileExists(pPath) {
-	// 	fmt.Print("cannot find file: ", fPath)
-	// 	return errors.New("cannot find flashplayer")
+	flashRuntimePath := filepath.Join(".", runtimeFolder, flashRuntimeName)
+	if !fileExists(flashRuntimePath) {
+		fmt.Print("cannot find file: ", flashRuntimePath)
+		return errors.New("Cannot find flashplayer")
+	}
+	fmt.Print("Opening: ", flashRuntimePath, swfPath)
+	cmd := exec.Command(flashRuntimePath, swfPath)
+	// cmd.SysProcAttr = &syscall.SysProcAttr{
+	// 	HideWindow:    true,
+	// 	CreationFlags: 0x08000000,
 	// }
-	// cmd := exec.Command(pPath, fPath)
-	// //     cmd.SysProcAttr = &syscall.SysProcAttr{
-	// //         HideWindow:    true,
-	// //         CreationFlags: 0x08000000,
-	// //     }
-	// if err := cmd.Start(); err != nil {
-	// 	log.Printf("[BYMR LAUNCHER] Failed to start BYMR build %s: %v", build, err)
-	// 	return err
-	// }
+	if err := cmd.Start(); err != nil {
+		log.Printf("[BYMR LAUNCHER] Failed to start BYMR build %s: %v", buildName, err)
+		return err
+	}
 	return nil
 }

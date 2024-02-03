@@ -8,8 +8,6 @@
   import AlertDialog from '$lib/components/AlertDialog.svelte';
   import { Quit, EventsOn, LogPrint } from '$wails/runtime/runtime.js';
 
-  // import { EventsOn } from '../../wailsjs/runtime'
-
   setMode('dark');
 
   const builds = [
@@ -20,8 +18,8 @@
   let build = builds[0];
 
   const runtimes = [
-    { value: 'flashplayer', label: 'Flash Player' },
-    { value: 'ruffle', label: 'Ruffle Player (Experimental)' },
+    { value: 'flashplayer.exe', label: 'Flash Player' },
+    // { value: 'ruffle', label: 'Ruffle Player (Experimental)' },
   ];
 
   let runtime = runtimes[0];
@@ -52,7 +50,7 @@
 
   function launch() {
     disabled = true;
-    LaunchGame(build.value, runtime.value)
+    LaunchGame(build.value, '0.2.3', runtime.value)
       .then(() => {
         showError = false;
         Quit();
