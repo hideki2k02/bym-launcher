@@ -74,9 +74,9 @@ func (a *App) InitializeApp() error {
 
 	flashRuntimeUrl, flashRuntimeFileName, err := getPlatformFlashRuntime(os, serverManifest)
 
-	if noLocalManifest || !fileExists(flashRuntimeFileName) {
+	if noLocalManifest || !fileExists(filepath.Join(runtimeFolder, flashRuntimeFileName)) {
 		// download players
-		runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Downloading flash player"))
+		runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Downloading flash player: %s", flashRuntimeFileName))
 		downloadRuntimes(flashRuntimeUrl, flashRuntimeFileName, serverManifest.httpsWorked)
 		if err != nil {
 			runtime.EventsEmit(a.ctx, "infoLog", fmt.Sprintf("Could not download latest flash runtime %s", err))
@@ -103,12 +103,12 @@ func (a *App) LaunchGame(buildName string, version string, flashRuntimeName stri
 		fmt.Print("Cannot find file: ", swfPath)
 		return errors.New("cannot find swf build")
 	}
-	// const runtimeFolder = "flashRuntimes"
 
 	flashRuntimePath := filepath.Join(".", runtimeFolder, flashRuntimeName)
 	if !fileExists(flashRuntimePath) {
 		fmt.Print("cannot find file: ", flashRuntimePath)
-		return errors.New("Cannot find flashplayer")
+		// return errors.New(fmt.Sprintf("Cannot find flashplayer: %s", flashRuntimePath))
+		return fmt.Errorf("Cannot find flashplayer: %s", flashRuntimePath)
 	}
 	fmt.Print("Opening: ", flashRuntimePath, swfPath)
 	cmd := exec.Command(flashRuntimePath, swfPath)

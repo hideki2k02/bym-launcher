@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"strings"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -17,8 +16,6 @@ var assets embed.FS
 func (a *App) onSecondInstanceLaunch(secondInstanceData options.SecondInstanceData) {
 	secondInstanceArgs := secondInstanceData.Args
 
-	println("user opened second instance", strings.Join(secondInstanceData.Args, ","))
-	println("user opened second from", secondInstanceData.WorkingDirectory)
 	runtime.WindowUnminimise(*&a.ctx)
 	runtime.Show(*&a.ctx)
 	go runtime.EventsEmit(*&a.ctx, "launchArgs", secondInstanceArgs)
