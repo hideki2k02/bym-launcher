@@ -10,23 +10,21 @@
 
   setMode('dark');
 
+  // Dynamically set during initialLoad event
   let builds = [];
   let build;
 
-  const runtimes = [
-    { value: 'flashplayer.exe', label: 'Flash Player' },
-    // { value: 'ruffle', label: 'Ruffle Player (Experimental)' }, TODO" implement this
-  ];
+  let runtimes = [];
+  let runtime;
 
-  let runtime = runtimes[0];
+  let current_game_version;
 
+  // Debug Variables
   let disabled = false;
   let showError = false;
   let errorCode = '';
 
   let debugLogs = [];
-
-  let version;
 
   EventsOn('infoLog', (event) => {
     debugLogs = [...debugLogs, event];
@@ -37,19 +35,31 @@
   }
 
   EventsOn('initialLoad', (event) => {
-    LogPrint(JSON.stringify(event));
+    // LogPrint(JSON.stringify(event));
 
+    // Dynamically gets the builds from JSON and set the first one as the default
     builds = Object.keys(event.manifest.builds).map((buildName) => ({
       value: buildName,
       label: capitalizeFirstLetter(buildName),
     }));
+
     build = builds[0];
-    version = event.manifest.currentGameVersion;
+
+    // Dynamically gets the flash runtimes from JSON and set the system one as default
+    runtimes = [{
+      value: event.manifest.flashRuntimes[event.platform],
+      label: `Flash Player (${capitalizeFirstLetter(event.platform)})`
+    }]
+
+    runtime = runtimes[0];
+
+    // Checks the JSON for the currentGameVersion
+    current_game_version = event.manifest.currentGameVersion;
 
     debugLogs = [
       ...debugLogs,
 
-      `Latest SWF version: ${event.manifest.currentGameVersion}`,
+      `Latest SWF version: ${current_game_version}`,
       `Latest Launcher version: ${event.manifest.currentLauncherVersion}`,
     ];
   });
@@ -60,7 +70,7 @@
 
   function launch() {
     disabled = true;
-    LaunchGame(build.value, version, runtime.value)
+    LaunchGame(build.value, current_game_version, runtime.value)
       .then(() => {
         showError = false;
         Quit();
@@ -90,7 +100,7 @@
     {/each}
   </div>
 
-  {#if !version}
+  {#if !current_game_version}
     <div role="status">
       <svg
         aria-hidden="true"
